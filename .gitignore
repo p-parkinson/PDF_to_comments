@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output files (examples can be kept, but working outputs should be ignored)
+working_outputs/
+
+# Do not store test harnesses
+test.sh
+
+# We do not include all development documentation
+DEVELOPMENT.md
+SECURITY_AUDIT.md
+SECURITY.md
+
+# Test PDFs (don't commit actual PDF files)
+*.pdf
+
+# Logs
+*.log

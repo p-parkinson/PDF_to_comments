@@ -1,0 +1,7 @@
+# PDF to Comments - Python Dependencies
+# Install with: pip install -r requirements.txt
+# Requires Python 3.7+
+
+# PyMuPDF - PDF processing and annotation extraction library
+# Used for: Opening PDFs, extracting annotations, text extraction, TOC parsing
+PyMuPDF>=1.23.0
