@@ -14,6 +14,7 @@ import sys
 import os
 from pathlib import Path
 import fitz  # PyMuPDF
+from typing import Optional, Any
 
 # Security constants
 MAX_PDF_SIZE_MB = 500  # Maximum PDF file size in MB
@@ -70,7 +71,7 @@ class PDFCommentExtractor:
     def __init__(self, pdf_path, debug=False):
         self.pdf_path = pdf_path
         self.comments = []
-        self.doc = None
+        self.doc: Optional[Any] = None
         self.debug = debug
         self.skipped_annotations = {}
         self.chapter_map = {}  # Maps page numbers to chapter names
@@ -116,6 +117,7 @@ class PDFCommentExtractor:
             if error:
                 print(f"Security Error: {error}", file=sys.stderr)
                 return False
+            assert validated_path is not None  # For Pylance
             
             # Check file size
             size_ok, error = self._check_file_size(validated_path)
@@ -129,6 +131,7 @@ class PDFCommentExtractor:
                 print(f"Opening PDF: {validated_path.name}")
             
             self.doc = fitz.open(str(validated_path))
+            assert self.doc is not None  # For Pylance
             
             # Check page count
             page_count = len(self.doc)
@@ -148,6 +151,7 @@ class PDFCommentExtractor:
     
     def _build_chapter_map(self):
         """Build a mapping of page numbers to chapter names from PDF outline"""
+        assert self.doc is not None  # For Pylance
         try:
             toc = self.doc.get_toc()
             if not toc:
@@ -409,13 +413,14 @@ class MarkdownGenerator:
                     return
                 
                 # Check if we should use chapter or page grouping
-                use_chapters = self.extractor and self.extractor.has_useful_chapters()
+                extractor = self.extractor
+                use_chapters = extractor and extractor.has_useful_chapters()
                 
-                if use_chapters:
+                if use_chapters and extractor:
                     # Group by chapter
                     comments_by_group = {}
                     for comment in self.comments:
-                        chapter = self.extractor.get_chapter_for_page(comment.page_num)
+                        chapter = extractor.get_chapter_for_page(comment.page_num)
                         if chapter not in comments_by_group:
                             comments_by_group[chapter] = []
                         comments_by_group[chapter].append(comment)
@@ -429,7 +434,8 @@ class MarkdownGenerator:
                         comments_by_group[page_key].append(comment)
                 
                 # Write comments grouped by chapter or page
-                for group_name in sorted(comments_by_group.keys()):
+                groups_sorted = sorted(comments_by_group.keys(), key=lambda g: min(c.page_num for c in comments_by_group[g]))
+                for group_name in groups_sorted:
                     f.write(f"## {group_name}\n\n")
                     # Sort by page, then line within each group
                     group_comments = sorted(comments_by_group[group_name], key=lambda c: (c.page_num, c.line_num))
@@ -457,23 +463,25 @@ class MarkdownGenerator:
                     return
                 
                 # Check if we should use chapter or page grouping
-                use_chapters = self.extractor and self.extractor.has_useful_chapters()
+                extractor = self.extractor
+                use_chapters = extractor and extractor.has_useful_chapters()
                 
                 for comment_type in [CommentType.ERROR, CommentType.CORRECTION, CommentType.TYPO, CommentType.NOTE]:
                     type_comments = [c for c in student_comments if c.comment_type == comment_type]
                     if type_comments:
                         f.write(f"## {comment_type}s\n\n")
                         
-                        if use_chapters:
+                        if use_chapters and extractor:
                             # Group by chapter
                             comments_by_group = {}
                             for comment in type_comments:
-                                chapter = self.extractor.get_chapter_for_page(comment.page_num)
+                                chapter = extractor.get_chapter_for_page(comment.page_num)
                                 if chapter not in comments_by_group:
                                     comments_by_group[chapter] = []
                                 comments_by_group[chapter].append(comment)
                             
-                            for group_name in sorted(comments_by_group.keys()):
+                            groups_sorted = sorted(comments_by_group.keys(), key=lambda g: min(c.page_num for c in comments_by_group[g]))
+                            for group_name in groups_sorted:
                                 f.write(f"### {group_name}\n\n")
                                 group_comments = sorted(comments_by_group[group_name], key=lambda c: (c.page_num, c.line_num))
                                 for comment in group_comments:
@@ -505,20 +513,20 @@ class MarkdownGenerator:
                     return
                 
                 # Check if we should use chapter or page grouping
-                use_chapters = self.extractor and self.extractor.has_useful_chapters()
-            
-                use_chapters = self.extractor and self.extractor.has_useful_chapters()
+                extractor = self.extractor
+                use_chapters = extractor and extractor.has_useful_chapters()
                 
-                if use_chapters:
+                if use_chapters and extractor:
                     # Group by chapter
                     questions_by_group = {}
                     for question in questions:
-                        chapter = self.extractor.get_chapter_for_page(question.page_num)
+                        chapter = extractor.get_chapter_for_page(question.page_num)
                         if chapter not in questions_by_group:
                             questions_by_group[chapter] = []
                         questions_by_group[chapter].append(question)
                     
-                    for group_name in sorted(questions_by_group.keys()):
+                    groups_sorted = sorted(questions_by_group.keys(), key=lambda g: min(q.page_num for q in questions_by_group[g]))
+                    for group_name in groups_sorted:
                         f.write(f"## {group_name}\n\n")
                         group_questions = sorted(questions_by_group[group_name], key=lambda c: (c.page_num, c.line_num))
                         for question in group_questions:
@@ -533,7 +541,7 @@ class MarkdownGenerator:
                             questions_by_page[page_key] = []
                         questions_by_page[page_key].append(question)
                     
-                    for page_name in sorted(questions_by_page.keys()):
+                    for page_name in sorted(questions_by_page.keys(), key=lambda g: int(g.split()[1])):
                         f.write(f"## {page_name}\n\n")
                         page_questions = sorted(questions_by_page[page_name], key=lambda c: (c.page_num, c.line_num))
                         for question in page_questions:
@@ -568,6 +576,7 @@ def main():
     if error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
+    assert validated_output is not None  # For Pylance
     
     # Create output directory if it doesn't exist
     if not validated_output.exists():

@@ -27,6 +27,7 @@ Thumbs.db
 
 # Output files (examples can be kept, but working outputs should be ignored)
 working_outputs/
+outputs/
 
 # Do not store test harnesses
 test.sh
